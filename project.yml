@@ -1,0 +1,65 @@
+name: QuadernoDrive
+options:
+  bundleIdPrefix: net.santablanca.quaderno
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+
+packages:
+  libquaderno:
+    url: https://github.com/sarraga/libquaderno.git
+    branch: main
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    # Homebrew OpenSSL 3 paths (Apple Silicon + Intel)
+    HEADER_SEARCH_PATHS:
+      - $(inherited)
+      - /opt/homebrew/opt/openssl@3/include
+      - /usr/local/opt/openssl@3/include
+    LIBRARY_SEARCH_PATHS:
+      - $(inherited)
+      - /opt/homebrew/opt/openssl@3/lib
+      - /usr/local/opt/openssl@3/lib
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  QuadernoDrive:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.santablanca.quaderno.drive
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/QuadernoDrive.entitlements
+    dependencies:
+      - package: libquaderno
+        product: CQuaderno
+      - target: QuadernoFileProvider
+        embed: true
+        codeSign: true
+
+  QuadernoFileProvider:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Extension
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.santablanca.quaderno.drive.fileprovider
+        INFOPLIST_FILE: Extension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extension/QuadernoFileProvider.entitlements
+    dependencies:
+      - package: libquaderno
+        product: CQuaderno

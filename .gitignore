@@ -1,0 +1,13 @@
+# Xcode / SwiftPM
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+build/
+
+# OS / Editor
+.DS_Store
+*.swp
+*~
