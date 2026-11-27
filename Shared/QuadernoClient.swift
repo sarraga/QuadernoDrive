@@ -31,6 +31,9 @@ public enum QuadernoErrorCode: Int32, Sendable {
     case notPaired = -15
     case serialMode = -16
     case deviceNotFound = -17
+    case exists = -18
+    case wifiOff = -19
+    case bufferTooSmall = -20
 }
 
 public struct QuadernoError: Error, LocalizedError, Sendable {
@@ -151,6 +154,7 @@ public actor QuadernoSession {
         var err = quaderno_error_t()
         let raw: OpaquePointer? = withOptionalCStrings(addr, configDir, serialHint) { cAddr, cCfg, cSer in
             var opts = quaderno_options_t()
+            quaderno_options_init(&opts)
             opts.addr = cAddr
             opts.conn_mode = mode.cValue
             opts.config_dir = cCfg
@@ -378,10 +382,11 @@ public actor QuadernoSession {
     ) throws -> String {
         var addrBuf = [CChar](repeating: 0, count: 256)
         var errBuf = [CChar](repeating: 0, count: 256)
-        let rc: Int32 = withOptionalCStrings(serialHint, cachedWifiAddr, nil) { cSer, cCached, _ in
+        let rc: quaderno_err_t = withOptionalCStrings(serialHint, cachedWifiAddr, nil) { cSer, cCached, _ in
             if let pinnedCertDer, !pinnedCertDer.isEmpty {
                 return pinnedCertDer.withUnsafeBytes { rawBuf in
                     var dopts = quaderno_discover_opts_t()
+                    quaderno_discover_opts_init(&dopts)
                     dopts.mode = mode.cValue
                     dopts.serial_hint = cSer
                     dopts.cached_wifi_addr = cCached
@@ -392,14 +397,15 @@ public actor QuadernoSession {
                 }
             }
             var dopts = quaderno_discover_opts_t()
+            quaderno_discover_opts_init(&dopts)
             dopts.mode = mode.cValue
             dopts.serial_hint = cSer
             dopts.cached_wifi_addr = cCached
             dopts.timeout_ms = timeoutMs
             return quaderno_discover_ex(&dopts, &addrBuf, addrBuf.count, &errBuf, errBuf.count)
         }
-        guard rc == 0 else {
-            let code = QuadernoErrorCode(rawValue: rc) ?? .unreachable
+        guard rc == QUADERNO_OK else {
+            let code = QuadernoErrorCode(rawValue: rc.rawValue) ?? .unreachable
             throw QuadernoError(code: code, message: String(cString: errBuf))
         }
         return String(cString: addrBuf)
@@ -433,6 +439,7 @@ public actor QuadernoSession {
             let ud = Unmanaged.passUnretained(box).toOpaque()
             return withOptionalCStrings(addr, configDir, nil) { cAddr, cCfg, _ in
                 var opts = quaderno_options_t()
+                quaderno_options_init(&opts)
                 opts.addr = cAddr
                 opts.conn_mode = mode.cValue
                 opts.config_dir = cCfg
